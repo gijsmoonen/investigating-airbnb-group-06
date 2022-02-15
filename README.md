@@ -1,2 +1,5 @@
-# DataPrep.-WorkflowMgt.
-Group06
+# Data Preparation & Workflow Management
+
+## Research 
+
+# Motivation
