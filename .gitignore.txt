@@ -1,0 +1,4 @@
+data/*
+gen/analysis/temp/*
+gen/data-preparation/temp/*
+gen/paper/temp/*
