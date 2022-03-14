@@ -15,7 +15,7 @@ The reviews can be left by guests of Airbnb up to 2 weeks after the end day of t
 
 **#analysis 2**
 **Make a price prediction in a linear regression model**
-Right now, few prices can be retrieved from the dataset, as the data provider has fetched all the rates for a few dates in the year. Different columms such as the location, room type, and the review amount could have impact on the price. To make a prediction for next year's event, a regression analysis is run over these variables. 
+Right now, few prices can be retrieved from the dataset, as the data provider has fetched all the rates for a few dates in the year. Different columms such as the location, room type, and the review amount could have impact on the price. To make a prediction for the prices of rooms throughout the city for next year's event, a regression analysis is run over these variables. 
 
 
 
