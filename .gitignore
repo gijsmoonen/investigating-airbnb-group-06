@@ -3,10 +3,8 @@ data/*
 gen/analysis/temp/*
 gen/data-preparation/temp/*
 gen/paper/temp/*
-.Rproj.user/*
 
 # RStudio files in root directory
-.Rproj.user
+.Rproj.user/
 .RData
 .RHistory
-investigating-airbnb-group-06.Rproj
