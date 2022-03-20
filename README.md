@@ -63,12 +63,14 @@ The main objective of this study is to analyze the impact of the Amsterdam Dance
 
 **#analysis 1**
 **Check the correlation between ADE and the amount of reviews left by guests**
+
 The amount of reviews can be retrieved from the dataset. An event such as ADE might boost the motivation to leave a review, which can be further investigated. 
 The yearly amount of reviews can be extracted to different neighbourhoods and be related to different time periods.
 
 
 **#analysis 2**
 **Make a price prediction in a linear regression model**
+
 Right now, few prices can be retrieved from the dataset, as the data provider has fetched all the rates for a few dates in the year. Different columms such as the location, room type, and the review amount etc. could have impact on the price. To make a prediction for the prices of rooms throughout the city for next year's event, a regression analysis is run over these variables. 
 
 The reviews can be left by guests of Airbnb up to 2 weeks after the end day of the stay. For this reason, the main time period measured against standardized data has been two weeks after the last date of the event.
