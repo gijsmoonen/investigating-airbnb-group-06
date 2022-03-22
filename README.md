@@ -55,7 +55,7 @@ You may skip the branch/merge steps and just commit directly to main branch if t
 # Research 
 
 # Motivation
-The main objective of this study is to analyze the impact of the Amsterdam Dance event, which is a yearly music festival active from 13th to 17th of October. A vast amount of domestic and international travelers come to the city to enjoy this event. Staying in an Airbnb is a viable option for guests who don't live in or nearby the city.
+The main objective of this study is to analyze the impact of the Amsterdam Dance event, which is a yearly music festival active from 13th to 17th of October. A vast amount of domestic and international travelers come to the city to enjoy this event. Staying in an Airbnb is a viable option for guests who don't live in or nearby the city. The purpose of the study is to investigate whether an event such as Amsterdam Dance Event has an effect on the number of reviews written by guests. The Amsterdam Dance Event, hereafter also referred to as 'ADE', could increase guests' motivation for leaving a review. When the proposed phenomenon can be confirmed, the research could be replicated with the use of other events to further investigate this correlation. Another possible effect of an event such as ADE could be the increase of prices because of ADE (or other events) taking place in a city. For a detailed overview of the analyses, please proceed to the Analysis description below. 
 
 
 # Analysis description
