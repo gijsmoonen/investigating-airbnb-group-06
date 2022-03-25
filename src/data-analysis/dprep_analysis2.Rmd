@@ -1,0 +1,222 @@
+---
+title: "Analysis_file"
+author: "Group 06"
+date: ''
+output:
+  word_document: default
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r install packages}
+install.packages("ggplot2",repos = "http://cran.us.r-project.org")
+install.packages("ggfortify",repos = "http://cran.us.r-project.org")
+install.packages("broom",repos = "http://cran.us.r-project.org")
+install.packages("dplyr",repos = "http://cran.us.r-project.org")
+install.packages("stargazer",repos = "http://cran.us.r-project.org")
+install.packages("gt",repos = "http://cran.us.r-project.org")
+install.packages("tidyverse",repos = "http://cran.us.r-project.org")
+install.packages("glue",repos = "http://cran.us.r-project.org")
+install.packages("ggiraphExtra",repos = "http://cran.us.r-project.org")
+```
+
+```{r run library functions, warning=FALSE, message=FALSE}
+library(ggplot2)
+library(ggfortify)
+library(broom)
+library(dplyr)
+library(stargazer)
+library(gt)
+library(tidyverse)
+library(glue)
+library(ggiraphExtra)
+```
+
+### Part 1 of analysis: screening of the entire year ##This part of the report is meant to showcase the amount of reviews in the year of 2021 and before...
+# Overview of total reviews left by guests throughout the year of 2021
+# line chart per week 
+```{r plot 1}
+ggplot(revperweek, aes(x = weeks, y=nr_comments)) + geom_line() + 
+  geom_hline(yintercept = mean(revperday$nr_comments)*7, color="red") + theme_light() + ggtitle("Number of weekly reviews 2021") +  ylab("Review count") + xlab("week number")
+```
+
+
+# Daily reviews during the ADE review period 2021-bar chart
+```{r plot 2, echo=FALSE}
+ggplot(ade_all_reviews, aes(x = date)) + geom_bar(stat = "count")
+```
+
+# Daily reviews during 2021-bar chart
+```{r plot 3}
+ggplot(adam_reviews, aes(x = date)) + geom_bar(stat = "count")
+```
+
+
+#Daily reviews during 2021-line chart
+```{r plot 4}
+ggplot(revperday, aes(x = date, y=nr_comments)) + geom_line() + 
+  geom_hline(yintercept = mean(revperday$nr_comments), color="red") + theme_light() + ggtitle("Number of daily reviews 2021") +  ylab("Review count") + xlab("date")
+```
+
+#Total reviews left by guests throughout the year of 2021 with ADE time marked
+```{r plot 5}
+gggplot(data = revperweek, mapping = aes(x = weeks, y = nr_comments)) + geom_line()+ geom_area(mapping = aes(x = ifelse(weeks>41 & weeks< 45 , weeks, 0)), fill = "red") + xlim(1, 48) + theme_light() + ggtitle("ADE review time 2021") +  ylab("Review count") + xlab("week number")
+```
+# with markings of the ADE time period when a review is possible #line chart per week highlighted during ADE review time 2021
+
+#Total reviews left by guests throughout the year of 2018/2019/2020 with ADE time marked
+```{r plot 6}
+ggplot(reviews_per_week20, aes(x = weeks, y= reviews)) + geom_line() + geom_area(mapping = aes(x = ifelse(weeks>41 & weeks< 45 , weeks, 0)), fill = "red") + xlim(1, 48) + theme_light() + ggtitle("ADE review time 2021") +  ylab("Review count") + xlab("week number")
+
+ggplot(reviews_per_week19, aes(x = weeks, y= reviews)) + geom_line() + geom_area(mapping = aes(x = ifelse(weeks>41 & weeks< 45 , weeks, 0)), fill = "red") + xlim(1, 48) + theme_light() + ggtitle("ADE review time 2021") +  ylab("Review count") + xlab("week number")
+
+ggplot(reviews_per_week18, aes(x = weeks, y= reviews)) + geom_line() + geom_area(mapping = aes(x = ifelse(weeks>41 & weeks< 45 , weeks, 0)), fill = "red") + xlim(1, 48) + theme_light() + ggtitle("ADE review time 2021") +  ylab("Review count") + xlab("week number") + xlims()
+
+```
+
+
+## plot amount of reviews per neighbourhood throughout the year
+
+```{r plot 7 reviews per neighbourhood, echo=FALSE}
+p <- ggplot(revperday_neigbourhood, aes(x = date, fill = neighbourhood_cleansed))
+head(revperday_neigbourhood)
+
+p + geom_area(stat = "bin") +
+  scale_fill_brewer(palette="Dark2") + theme_light() +
+  ggtitle("Daily reviews per neighbourhood 2021")
+
+```
+## info neighbourhoods #1-centre #2-north #3-east #4-south #5-west #6-new_west #7-southeast
+
+## table of the amount of reviews per neighbourhood
+```{r plot 8}
+reviews_event %>% 
+  gt() %>% 
+  tab_header( 
+    title = md("**Amsterdam**"),
+    subtitle = md("Amount of reviews per neighbourhoods 2021")
+  )
+```
+
+
+
+### Part 2 of analysis: Regression (based on the building block) 
+
+Regression of frequency as DV and neighbourhoods as IV
+```{r plot 9 regression, echo=FALSE}
+mdl_reviews2_wprice <- lm(freq~as.factor(neighbourhood_cleansed)+price, data=new_reviews)
+```
+
+# 1. evaluate linear model assumptions
+```{r plot 10}
+autoplot(
+  mdl_reviews2_wprice,
+  which = 1:3,
+  nrow = 1,
+  ncol = 3
+)
+```
+
+## outliers filter
+#filter on frequency anmount determimed by Cook's distance
+#filter on price set manually at cut-off point of 700
+```{r plot 11}
+nooutliers_wprice <- new_reviews %>%
+    filter(freq != 333, freq != 270, freq != 249, freq != 225, freq != 175, freq != 127, price<700)
+```
+
+
+
+# 2. outlier screening
+
+```{r plot 12}
+freq_influence_wprice <- mdl_reviews2_wprice %>%
+  augment() %>%
+  select(freq,price, "as.factor(neighbourhood_cleansed)", leverage = .hat, cooks_dist = .cooksd) %>%
+  arrange(desc(cooks_dist)) %>%
+  head()
+```
+
+
+```{r plot 13}
+freq_influence_wprice %>% 
+  gt() %>% 
+  tab_header( 
+    title = md("**Outliers in model summary**"),
+  )
+```
+
+## plot w/o outliers
+# If a listing has a high frequency of reviews in one year, it is considered an outlier
+
+```{r plot 14}
+clean_rf_neighbourhood <-  lm(freq~as.factor(neighbourhood_cleansed), data=new_reviews_nooutliers)
+autoplot(
+  clean_rf_neighbourhood,
+  which = 1:3,
+  nrow = 1,
+  ncol = 3
+)
+```
+
+# plot outliers
+
+```{r plot 15}
+plot(mdl_reviews2_wprice, 4)
+plot(mdl_reviews2_wprice, 5)
+
+```
+
+# plot cook's distance of outliers
+
+```{r plot 16}
+plot(mdl_nooutliers_wprice, 4)
+plot(mdl_nooutliers_wprice, 5)
+```
+
+# 3. #model reporting
+
+```{r plot 17}
+stargazer(mdl_reviews2_wprice, mdl_nooutliers_wprice,
+          title = "Figure 1: Car's stop distance increases as speed increases",
+          dep.var.caption = "Frequency of reviews",  
+          dep.var.labels = "",  
+          covariate.labels = c("Neigbourhood/price"),  
+          column.labels = c("Full model", "Outlier excluded"),
+          notes.label = "Significance levels",  
+          type="html",
+          out="output.html"  
+)
+```
+
+## plot w/o outliers
+# If a listing has a high frequency of reviews in one year, it is considered an outlier
+
+```{r plot 18}
+clean_rf_neighbourhood <-  lm(freq~as.factor(neighbourhood_cleansed), data=new_reviews_nooutliers)
+autoplot(
+  clean_rf_neighbourhood,
+  which = 1:3,
+  nrow = 1,
+  ncol = 3
+)
+```
+
+#4.
+#show linear relationship of model per neighbourhood
+```{r plot 19 }
+#4 relationship
+#with outliers
+ggplot(new_reviews,aes(y=freq,x=price,color=neighbourhood_cleansed))+geom_point()+stat_smooth(method="lm",se=FALSE) + ylab("review frequency per listing") + xlab("price")
+View(new_reviews)
+```
+
+#show linear relationship of model per neighbourhood outliers excluded
+
+```{r plot 20}
+ggplot(nooutliers_wprice,aes(y=freq,x=price,color=neighbourhood_cleansed))+geom_point()+stat_smooth(method="lm",se=FALSE)  + ylab("review frequency per listing") + xlab("price")
+```
