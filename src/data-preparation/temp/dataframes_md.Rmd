@@ -1,0 +1,436 @@
+---
+title: "Airbnb ADE amsterdam"
+author: "Group 06"
+date: "3/21/2022"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Create a review list for Amsterdam in the year 2021
+## Packages and library functions
+### Download the right packages for analysis
+```{r packages, warning=FALSE, message=FALSE}
+install.packages("haven",repos = "http://cran.us.r-project.org")
+install.packages("dplyr",repos = "http://cran.us.r-project.org")
+install.packages("ggplot2",repos = "http://cran.us.r-project.org")
+install.packages("tidyverse",repos = "http://cran.us.r-project.org") 
+install.packages("readr",repos = "http://cran.us.r-project.org")
+```
+### Run the installed packages using the library function
+```{r library functions, warning=FALSE, message=FALSE}
+library(haven)
+library(dplyr)
+library(ggplot2)
+library(tidyverse)
+library(readr)
+```
+## Download files
+### Download Airbnb listings data for all the seasons of 2021
+```{r message=FALSE}
+listings_autumn <- read_csv("http://data.insideairbnb.com/the-netherlands/north-holland/amsterdam/2021-12-05/data/listings.csv.gz")
+listings_summer <- read_csv("http://data.insideairbnb.com/the-netherlands/north-holland/amsterdam/2021-09-07/data/listings.csv.gz") 
+listings_spring <- read_csv("http://data.insideairbnb.com/the-netherlands/north-holland/amsterdam/2021-06-03/data/listings.csv.gz") 
+listings_winter <- read_csv("http://data.insideairbnb.com/the-netherlands/north-holland/amsterdam/2021-03-04/data/listings.csv.gz")
+```
+### Download Airbnb calendar data 
+```{r download calender data, message=FALSE}
+calendar <- read_csv("http://data.insideairbnb.com/the-netherlands/north-holland/amsterdam/2021-12-05/data/calendar.csv.gz")
+```
+### Download Airbnb reviews data
+```{r download review data, message=FALSE}
+reviews <- read_csv("http://data.insideairbnb.com/the-netherlands/north-holland/amsterdam/2021-12-05/data/reviews.csv.gz")
+```
+## Prepare the data frame for listings (Amsterdam 2021)
+### Add a column for season
+```{r add season columns}
+listings_autumn$season <- c("autumn")
+listings_summer$season <- c("summer")
+listings_spring$season <- c("spring")
+listings_winter$season <- c("winter")
+```
+### Combine all seasonal listings 2021 and bind them together
+```{r bind seasonal listings}
+adam_listings <- rbind(listings_autumn, listings_summer, listings_spring, listings_winter)
+```
+### Select the variables that are relevant for the data frame
+```{r select variables for the listings dataframe}
+new_listings_price <- adam_listings %>%
+  select(id, neighbourhood_cleansed, room_type, price, season)
+```
+#### Remove the dollar sign and commas (for prices above thousand)
+```{r remove dollar signs and commas}
+new_listings_price$price <- gsub('[$,]', '', new_listings_price$price)
+```
+#### Changing price variable from character to numeric
+```{r change class of price}
+new_listings_price$price <- as.numeric(new_listings_price$price)
+```
+#### Check for the results
+```{r check results class change price, message=FALSE}
+class(new_listings_price$price)
+```
+## Prepare the data frame for reviews (Amsterdam 2021)
+### Select the variables that are relevant for the data frame
+```{r select variables for reviews dataframe}
+reviews_cleaned <- reviews %>% 
+  select(listing_id, date, comments)
+```
+### Create subsets for reviews for every season of 2021 
+```{r create subsets for seasons 2021}
+reviews_autumn21 <- subset(reviews_cleaned, date> "2021-09-07" & date < "2021-12-05")
+reviews_summer21 <- subset(reviews_cleaned, date> "2021-06-03" & date < "2021-09-07")
+reviews_spring21 <- subset(reviews_cleaned, date> "2021-03-04" & date < "2021-06-03")
+reviews_winter2021 <- subset(reviews_cleaned, date> "2020-12-06" & date < "2021-03-04")
+```
+#### Switch to plyr to enable the count function
+```{r switch packages 1, warning=FALSE, message=FALSE}
+detach(package:dplyr)
+library(plyr)
+```
+### Count the number of reviews per season
+```{r count reviews per season, message=FALSE}
+amount_reviews_aut <- reviews_autumn21 %>% count("listing_id")
+amount_reviews_aut$season <- c("autumn")
+amount_reviews_sum <- reviews_summer21 %>% count("listing_id")
+amount_reviews_sum$season <- c("summer")
+amount_reviews_spr <- reviews_spring21 %>% count("listing_id")
+amount_reviews_spr$season <- c("spring")
+amount_reviews_win <- reviews_winter2021 %>% count("listing_id")
+amount_reviews_win$season <- c("winter")
+```
+### Bind the seasonal review data into a single data frame
+```{r bind datasets with amounts of reviews}
+reviews2021 <- rbind(amount_reviews_aut, amount_reviews_sum, amount_reviews_spr, amount_reviews_win)
+```
+#### Detach plyr and load dplyr
+```{r switch packages 2, warning=FALSE, message=FALSE}
+detach(package:plyr)
+library(dplyr)
+```
+## Join the review and listing data together
+```{r join dataframes of listing and review data}
+consolidated <- new_listings_price %>%
+  inner_join(reviews2021, by = c("id" = "listing_id"), c("season" = "season"))
+```
+### Filter only for observations with reviews
+```{r filter observations with reviews}
+seasonal_reviews <- filter(consolidated, season.x == season.y)
+```
+### Clean the data frame
+```{r select variables relevant to the review df}
+new_reviews <- seasonal_reviews %>% 
+  select(id, neighbourhood_cleansed, room_type, price, freq, season.y)
+```
+## Create dummy variables for analysis
+### Create dummy variable for neighbourhoods
+```{r create dummy neighbourhood}
+new_reviews$neighbourhood_cleansed <- replace(new_reviews$neighbourhood_cleansed, new_reviews$neighbourhood_cleansed == "Oostelijk Havengebied - Indische Buurt", 3)
+new_reviews$neighbourhood_cleansed <- replace(new_reviews$neighbourhood_cleansed, new_reviews$neighbourhood_cleansed == "Centrum-West", 1)
+new_reviews$neighbourhood_cleansed <- replace(new_reviews$neighbourhood_cleansed, new_reviews$neighbourhood_cleansed == "Centrum-Oost", 1)
+new_reviews$neighbourhood_cleansed <- replace(new_reviews$neighbourhood_cleansed, new_reviews$neighbourhood_cleansed == "De Baarsjes - Oud-West", 5)
+new_reviews$neighbourhood_cleansed <- replace(new_reviews$neighbourhood_cleansed, new_reviews$neighbourhood_cleansed == "Oud-Oost", 3)
+new_reviews$neighbourhood_cleansed <- replace(new_reviews$neighbourhood_cleansed, new_reviews$neighbourhood_cleansed == "De Pijp - Rivierenbuurt", 4)
+new_reviews$neighbourhood_cleansed <- replace(new_reviews$neighbourhood_cleansed, new_reviews$neighbourhood_cleansed == "Slotervaart", 6)
+new_reviews$neighbourhood_cleansed <- replace(new_reviews$neighbourhood_cleansed, new_reviews$neighbourhood_cleansed == "Zuid", 4)
+new_reviews$neighbourhood_cleansed <- replace(new_reviews$neighbourhood_cleansed, new_reviews$neighbourhood_cleansed == "Watergraafsmeer", 3)
+new_reviews$neighbourhood_cleansed <- replace(new_reviews$neighbourhood_cleansed, new_reviews$neighbourhood_cleansed == "Westerpark", 5)
+new_reviews$neighbourhood_cleansed <- replace(new_reviews$neighbourhood_cleansed, new_reviews$neighbourhood_cleansed == "Noord-Oost", 2)
+new_reviews$neighbourhood_cleansed <- replace(new_reviews$neighbourhood_cleansed, new_reviews$neighbourhood_cleansed == "Bos en Lommer", 5)
+new_reviews$neighbourhood_cleansed <- replace(new_reviews$neighbourhood_cleansed, new_reviews$neighbourhood_cleansed == "Buitenveldert - Zuidas", 4)
+new_reviews$neighbourhood_cleansed <- replace(new_reviews$neighbourhood_cleansed, new_reviews$neighbourhood_cleansed == "Noord-West", 2)
+new_reviews$neighbourhood_cleansed <- replace(new_reviews$neighbourhood_cleansed, new_reviews$neighbourhood_cleansed == "Geuzenveld - Slotermeer", 6)
+new_reviews$neighbourhood_cleansed <- replace(new_reviews$neighbourhood_cleansed, new_reviews$neighbourhood_cleansed == "De Aker - Nieuw Sloten", 6)
+new_reviews$neighbourhood_cleansed <- replace(new_reviews$neighbourhood_cleansed, new_reviews$neighbourhood_cleansed == "IJburg - Zeeburgereiland", 3)
+new_reviews$neighbourhood_cleansed <- replace(new_reviews$neighbourhood_cleansed, new_reviews$neighbourhood_cleansed == "Bijlmer-Centrum", 7)
+new_reviews$neighbourhood_cleansed <- replace(new_reviews$neighbourhood_cleansed, new_reviews$neighbourhood_cleansed == "Gaasperdam - Driemond", 7)
+new_reviews$neighbourhood_cleansed <- replace(new_reviews$neighbourhood_cleansed, new_reviews$neighbourhood_cleansed == "Oud-Noord", 2)
+new_reviews$neighbourhood_cleansed <- replace(new_reviews$neighbourhood_cleansed, new_reviews$neighbourhood_cleansed == "Osdorp", 6)
+new_reviews$neighbourhood_cleansed <- replace(new_reviews$neighbourhood_cleansed, new_reviews$neighbourhood_cleansed == "Bijlmer-Oost", 7)
+
+new_reviews$centre <- new_reviews$neighbourhood_cleansed
+new_reviews$centre[new_reviews$centre != 1] <- 0
+new_reviews$north <- new_reviews$neighbourhood_cleansed
+new_reviews$north[new_reviews$north != 2] <- 0
+new_reviews$north[new_reviews$north == 2] <- 1
+new_reviews$east <- new_reviews$neighbourhood_cleansed
+new_reviews$east[new_reviews$east != 3] <- 0
+new_reviews$east[new_reviews$east == 3] <- 1
+new_reviews$south <- new_reviews$neighbourhood_cleansed
+new_reviews$south[new_reviews$south != 4] <- 0
+new_reviews$south[new_reviews$south == 4] <- 1
+new_reviews$west <- new_reviews$neighbourhood_cleansed
+new_reviews$west[new_reviews$west != 5] <- 0
+new_reviews$west[new_reviews$west == 5] <- 1
+new_reviews$new_west <- new_reviews$neighbourhood_cleansed
+new_reviews$new_west[new_reviews$new_west != 6] <- 0
+new_reviews$new_west[new_reviews$new_west == 6] <- 1
+new_reviews$southeast <- new_reviews$neighbourhood_cleansed
+new_reviews$southeast[new_reviews$southeast != 7] <- 0
+new_reviews$southeast[new_reviews$southeast == 7] <- 1
+```
+### Create dummy variable for season
+```{r create dummy season}
+new_reviews$season.y <- replace(new_reviews$season.y, new_reviews$season.y == "autumn", 1)
+new_reviews$season.y <- replace(new_reviews$season.y, new_reviews$season.y == "summer", 2)
+new_reviews$season.y <- replace(new_reviews$season.y, new_reviews$season.y == "spring", 3)
+new_reviews$season.y <- replace(new_reviews$season.y, new_reviews$season.y == "winter", 4)
+
+new_reviews$autumn <- new_reviews$season.y
+new_reviews$autumn[new_reviews$autumn != 1] <- 0
+new_reviews$summer <- new_reviews$season.y
+new_reviews$summer[new_reviews$summer != 2] <- 0
+new_reviews$summer[new_reviews$summer == 2] <- 1
+new_reviews$spring <- new_reviews$season.y
+new_reviews$spring[new_reviews$spring != 3] <- 0
+new_reviews$spring[new_reviews$spring == 3] <- 1
+new_reviews$winter <- new_reviews$season.y
+new_reviews$winter[new_reviews$winter != 4] <- 0
+new_reviews$winter[new_reviews$winter == 4] <- 1
+```
+### Create dummy variable for room type
+```{r create dummy room type}
+new_reviews$room_type <- replace(new_reviews$room_type, new_reviews$room_type == "Private room", 1)
+new_reviews$room_type <- replace(new_reviews$room_type, new_reviews$room_type == "Entire home/apt", 2)
+new_reviews$room_type <- replace(new_reviews$room_type, new_reviews$room_type == "Hotel room", 3)
+new_reviews$room_type <- replace(new_reviews$room_type, new_reviews$room_type == "Shared room", 4)
+
+new_reviews$private_room <- new_reviews$room_type
+new_reviews$private_room[new_reviews$private_room != 1] <- 0
+new_reviews$entire_home_apt <- new_reviews$room_type
+new_reviews$entire_home_apt[new_reviews$entire_home_apt != 2] <- 0
+new_reviews$entire_home_apt[new_reviews$entire_home_apt == 2] <- 1
+new_reviews$hotel_room <- new_reviews$room_type
+new_reviews$hotel_room[new_reviews$hotel_room != 3] <- 0
+new_reviews$hotel_room[new_reviews$hotel_room == 3] <- 1
+new_reviews$shared_room <- new_reviews$room_type
+new_reviews$shared_room[new_reviews$shared_room != 4] <- 0
+new_reviews$shared_room[new_reviews$shared_room == 4] <- 1
+```
+## Create a dataset including data of the review per listing per day
+### Create a column in reviews dataset to indicate the season
+```{r create a column for season in the review dataframe}
+reviews_autumn21$season <- 1
+reviews_summer21$season <- 2
+reviews_spring21$season <- 3
+reviews_winter2021$season <- 4
+```
+### Bind the seasonal data frames together
+```{r bind the seasonal review data}
+reviews_by_season <- rbind(reviews_autumn21, reviews_summer21, reviews_spring21, reviews_winter2021)
+```
+### Join the datasets with variables and dates together
+```{r join the datasets with all variable together}
+reviews_by_day <- reviews_by_season %>%
+  inner_join(new_reviews, by = c("listing_id" = "id"), c("season" = "season.y"))
+```
+### Filter the dataset for original reviews
+```{r filter for origional reviews}
+reviews_by_day_origional <- filter(reviews_by_day, season == season.y)
+```
+### Turn the comments into a value (every comment=1)
+```{r turn comments into a 1}
+reviews_by_day_origional$comments = 1 
+```
+### Filter out unnecessary columns
+```{r delete unnecessary columns}
+adam_reviews <- reviews_by_day_origional %>% 
+  select(-freq, -season.y)
+```
+## Add week column
+### Add a column for the weeknumber
+```{r add a column for weeknumbers}
+adam_reviews$weeks <- format(as.Date(adam_reviews$date), "%W")
+```
+### Create a subset for all the weeks starting week 1 of 2021
+```{r create a subset for 2021}
+adam_reviews_pw <- subset(adam_reviews, weeks!= "00" & weeks < "49")
+```
+### Change the class of weeks from character to integer
+```{r change the class of the weeks column to integer, message=FALSE}
+adam_reviews_pw$weeks <- as.integer(adam_reviews_pw$weeks)
+```
+#### Check for the results
+```{r check whether weeks in now of the class integer, include=FALSE, message=FALSE}
+class(adam_reviews_pw$weeks)
+```
+```{r view the reviews data including weeknumbers}
+View(adam_reviews_pw)
+```
+# Create a set per neighbourhood for ADE vs year round
+## Create a dataframe including only the ADE reviews
+### Create a subset for the dates incl 2 weeks after ade
+```{r Create a subset for ADE}
+ade_all_reviews <- subset(reviews_cleaned, date> "2021-10-13" & date < "2021-10-31")
+```
+### Count amount reviews per listing ADE 2021
+#### Detach dplyr and load plyr
+```{r switch packages2, warning=FALSE, message=FALSE}
+detach(package:dplyr)
+library(plyr)
+```
+### Count the number of reviews
+```{r count the reviews for ADE, message=FALSE}
+ade_amount_reviews <- ade_all_reviews %>% count("listing_id")
+```
+#### Detach plyr and load dplyr
+```{r switch packages3, warning=FALSE, message=FALSE}
+detach(package:plyr)
+library(dplyr)
+```
+### Select the variables 
+```{r select the listing variables for the review comparison}
+new_listings <- adam_listings %>% select(id, neighbourhood_cleansed)
+```
+### Joined the dataframes for listings and counted reviews together
+```{r join the listing variables and reviews for ADE together}
+ade_review_hood <- ade_amount_reviews %>%
+  inner_join(new_listings, by = c("listing_id" = "id"))
+```
+#### Detach plyr and load dplyr
+```{r switch packages4, warning=FALSE, message=FALSE}
+detach(package:dplyr)
+library(plyr)
+```
+### Count reviews per neighbourhood during ADE
+```{r count ADE reviews per neighbourhood , message=FALSE}
+ade_count_review_hood <- ade_review_hood %>% count("neighbourhood_cleansed")
+```
+## Create a dataset for all the reviews of 2021 excluding ADE
+### Create subsets of review data for all the days excluding ade + 2 weeks after the event
+```{r create subsets for reviews excluding ADE}
+b_ade_reviews <- subset(reviews_cleaned, date> "2021-01-01" & date < "2021-10-12")
+a_ade_reviews <- subset(reviews_cleaned, date> "2021-11-01" & date < "2021-12-31")
+```
+#### Bind the subsets together
+```{r bind the two files excluding ADE data together}
+not_ade_reviews <- rbind(b_ade_reviews, a_ade_reviews)
+```
+### Count amount reviews per listing for all of 2021 excluding ade + 2 weeks after the event
+```{r count number of reviews excludign ADE, message=FALSE}
+not_amount_reviews <- not_ade_reviews %>% count("listing_id")
+```
+#### Detach plyr and load dplyr
+```{r switch package5, warning=FALSE, message=FALSE}
+detach(package:plyr)
+library(dplyr)
+```
+### Join the dataframes for listings and counted reviews together
+```{r join the dataframes for listings and reviews excluding ade}
+not_review_hood <- not_amount_reviews %>%
+  inner_join(new_listings, by = c("listing_id" = "id"))
+```
+#### Detach dplyr and load plyr
+```{r switch package6, warning=FALSE, message=FALSE}
+detach(package:dplyr)
+library(plyr)
+```
+### Count reviews per neighbourhood for all of 2021 excluding ade + 2 weeks after the event
+```{r count reviews per neigbourghood for dates excludign ADE, message=FALSE}
+not_count_review_hood <- not_review_hood %>% count("neighbourhood_cleansed")
+```
+#### Detach plyr and load dplyr
+```{r switch package7, warning=FALSE, message=FALSE}
+detach(package:plyr)
+library(dplyr)
+```
+## Join the datasets (ade vs not ade) together
+```{r join the data sets ADE vs not ADE together}
+reviews_event <- ade_count_review_hood %>%
+  inner_join(not_count_review_hood, by = c("neighbourhood_cleansed" = "neighbourhood_cleansed"), suffix = c("_ade", "_year_round"))
+```
+## Mutate extra columns
+```{r mutate the columns}
+reviews_event <-reviews_event %>% mutate(ADE_reviews = freq_ade / freq_year_round)
+reviews_event <-reviews_event %>% mutate(ADE_per_neigbbourhood = reviews_event$freq_ade/sum(reviews_event$freq_ade)*100)
+reviews_event <-reviews_event %>% mutate(NOT_ADE_per_neigbbourhood = reviews_event$freq_year_round/sum(reviews_event$freq_year_round)*100)
+```
+## Create overviews of the data
+### Create an overview for reviews per week
+```{r overview reviews per week}
+revperweek <- adam_reviews_pw  %>% group_by(weeks) %>% summarize(nr_comments = sum(comments, NA.rm=FALSE))
+```
+### Create an overview for reviews per day
+```{r overview reviews per day}
+revperday <-  adam_reviews_pw  %>% group_by(date) %>% summarize(nr_comments = sum(comments, NA.rm=FALSE))
+```
+### Create an overview for reviews by neighbourhood per day
+```{r overview reviews by neighbourhood per day}
+revperday_neigbourhood <- adam_reviews %>% group_by(date, neighbourhood_cleansed) %>% summarize(nr_comments = sum(comments, na.rm=TRUE))
+```
+# Create an overview of the distribution of reviews per year
+## Only select relevant columns for the dataset
+```{r create a review set and change comments to 1}
+reviews_cleaned <- reviews %>% 
+  select(listing_id, date, comments) %>%
+  mutate(comments = 1)  
+```
+## 2020
+### Create a subset for the dates of 2020
+```{r create subset 2020}
+reviews_2020 <- subset(reviews_cleaned, date> "2020-01-06" & date < "2021-01-01")
+```
+### Add a column spicifying weeknumbers
+```{r add weeknumbers 2020}
+reviews_2020$weeks <- format(as.Date(reviews_2020$date), "%W")
+```
+### Alter the class of the weeks and comments columns
+```{r change class variables 2020}
+reviews_2020$weeks <- as.integer(reviews_2020$weeks)
+reviews_2020$comments <- as.integer(reviews_2020$comments)
+```
+### Change the comments into one's
+```{r change comments to 1 2020}
+reviews_2020$comment <- 1
+```
+### Summarize the reviews per week in 2020
+```{r reviews per week 2020}
+reviews_per_week20 <- reviews_2020 %>% group_by(weeks) %>% summarize(reviews = sum(comment, na.rm=TRUE))
+```
+## 2019
+### Create a subset for the dates of 2019
+```{r create subset 2019}
+reviews_2019 <- subset(reviews_cleaned, date> "2019-01-06" & date < "2020-01-01")
+```
+### Add a column spicifying weeknumbers
+```{r add weeknumbers 2019}
+reviews_2019$weeks <- format(as.Date(reviews_2019$date), "%W")
+```
+### Alter the class of the weeks and comments columns
+```{r change class variables 2019}
+reviews_2019$weeks <- as.integer(reviews_2019$weeks)
+reviews_2019$comments <- as.integer(reviews_2019$comments)
+```
+### Change the comments into one's
+```{r change comments to 1 2019}
+reviews_2019$comment <- 1
+```
+### Summarize the reviews per week in 2019
+```{r summarize reviews per week 2019}
+reviews_per_week19 <- reviews_2019 %>% group_by(weeks) %>% summarize(reviews = sum(comment, na.rm=TRUE))
+```
+## 2018
+### Create a subset for the dates of 2018
+```{r create subset 2018}
+reviews_2018 <- subset(reviews_cleaned, date> "2017-12-31" & date < "2019-01-01")
+```
+### Add a column spicifying weeknumbers
+```{r add weeknumbers 2018}
+reviews_2018$weeks <- format(as.Date(reviews_2018$date), "%W")
+```
+### Alter the class of the weeks and comments columns
+```{r change class variables 2018}
+reviews_2018$weeks <- as.integer(reviews_2018$weeks)
+reviews_2018$comments <- as.integer(reviews_2018$comments)
+```
+### Change the comments into one's
+```{r change comments to 1 2018}
+reviews_2018$comment <- 1
+```
+### Summarize the reviews per week in 2018
+```{r summarize reviews per week 2018}
+reviews_per_week18 <- reviews_2018 %>% group_by(weeks) %>% summarize(reviews = sum(comment, na.rm=TRUE))
+```
