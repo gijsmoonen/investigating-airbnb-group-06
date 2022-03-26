@@ -24,6 +24,7 @@ git pull [branch-name] (***not sure if this is the meta)
 
 **Step 3: Git Workflow**
 When working on the project, think in which subdirectory in de *src* folder the Rscript should be. Scripts that load and transform the data should be in the *data-preparation* folder and scripts for linear regression or any other kind of analysis or plots, should be in the *analysis* folder. Then use the following command in Git Bash,
+* git pull (should be done before adding or changing files)
 - git status
 - git add [file_name]
 - git commit -m [commit_message]
