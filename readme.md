@@ -25,3 +25,7 @@ Right now, few prices can be retrieved from the dataset, as the data provider ha
 
 The reviews can be left by guests of Airbnb up to 2 weeks after the end day of the stay. For this reason, the main time period measured against standardized data has been two weeks after the last date of the event.
 
+# Outcomes of the analyses
+
+For a detailed overview of the outcomes of the analyses, please refer to the deployment file which can be found in the scr folder.
+
