@@ -12,5 +12,5 @@ conflict_prefer("here", "here")
 zip_file <- list.files(path = here("data/airbnb"), pattern = "*.zip",
                                     full.names = T)
 
-ldply(.data = zip_file, .fun = unzip, exdir = here("data/airbnb"))  
+ldply(.data = zip_file, .fun = unzip, exdir = here("gen/data-preparation/temp"))  
 
