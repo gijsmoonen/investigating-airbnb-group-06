@@ -1,0 +1,111 @@
+---
+title: '''descriptive_statistics_ade'
+author: "Group 06"
+date: "3/27/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Create a set per neighbourhood for ADE vs year round
+## Create a dataframe including only the ADE reviews
+### Create a subset for the dates incl 2 weeks after ade
+```{r Create a subset for ADE}
+ade_all_reviews <- subset(reviews_cleaned, date> "2021-10-13" & date < "2021-10-31")
+```
+### Count amount reviews per listing ADE 2021
+#### Detach dplyr and load plyr
+```{r switch packages2, warning=FALSE, message=FALSE}
+detach(package:dplyr)
+library(plyr)
+```
+### Count the number of reviews
+```{r count the reviews for ADE, message=FALSE}
+ade_amount_reviews <- ade_all_reviews %>% count("listing_id")
+```
+#### Detach plyr and load dplyr
+```{r switch packages3, warning=FALSE, message=FALSE}
+detach(package:plyr)
+library(dplyr)
+```
+### Select the variables 
+```{r select the listing variables for the review comparison}
+new_listings <- adam_listings %>% select(id, neighbourhood_cleansed)
+```
+### Joined the dataframes for listings and counted reviews together
+```{r join the listing variables and reviews for ADE together}
+ade_review_hood <- ade_amount_reviews %>%
+  inner_join(new_listings, by = c("listing_id" = "id"))
+```
+#### Detach plyr and load dplyr
+```{r switch packages4, warning=FALSE, message=FALSE}
+detach(package:dplyr)
+library(plyr)
+```
+### Count reviews per neighbourhood during ADE
+```{r count ADE reviews per neighbourhood , message=FALSE}
+ade_count_review_hood <- ade_review_hood %>% count("neighbourhood_cleansed")
+```
+## Create a dataset for all the reviews of 2021 excluding ADE
+### Create subsets of review data for all the days excluding ade + 2 weeks after the event
+```{r create subsets for reviews excluding ADE}
+b_ade_reviews <- subset(reviews_cleaned, date> "2021-01-01" & date < "2021-10-12")
+a_ade_reviews <- subset(reviews_cleaned, date> "2021-11-01" & date < "2021-12-31")
+```
+#### Bind the subsets together
+```{r bind the two files excluding ADE data together}
+not_ade_reviews <- rbind(b_ade_reviews, a_ade_reviews)
+```
+### Count amount reviews per listing for all of 2021 excluding ade + 2 weeks after the event
+```{r count number of reviews excludign ADE, message=FALSE}
+not_amount_reviews <- not_ade_reviews %>% count("listing_id")
+```
+#### Detach plyr and load dplyr
+```{r switch package5, warning=FALSE, message=FALSE}
+detach(package:plyr)
+library(dplyr)
+```
+### Join the dataframes for listings and counted reviews together
+```{r join the dataframes for listings and reviews excluding ade}
+not_review_hood <- not_amount_reviews %>%
+  inner_join(new_listings, by = c("listing_id" = "id"))
+```
+#### Detach dplyr and load plyr
+```{r switch package6, warning=FALSE, message=FALSE}
+detach(package:dplyr)
+library(plyr)
+```
+### Count reviews per neighbourhood for all of 2021 excluding ade + 2 weeks after the event
+```{r count reviews per neigbourghood for dates excludign ADE, message=FALSE}
+not_count_review_hood <- not_review_hood %>% count("neighbourhood_cleansed")
+```
+#### Detach plyr and load dplyr
+```{r switch package7, warning=FALSE, message=FALSE}
+detach(package:plyr)
+library(dplyr)
+```
+## Join the datasets (ade vs not ade) together
+```{r join the data sets ADE vs not ADE together}
+reviews_event <- ade_count_review_hood %>%
+  inner_join(not_count_review_hood, by = c("neighbourhood_cleansed" = "neighbourhood_cleansed"), suffix = c("_ade", "_year_round"))
+```
+## Mutate extra columns
+```{r mutate the columns}
+reviews_event <-reviews_event %>% mutate(ADE_reviews = freq_ade / freq_year_round)
+reviews_event <-reviews_event %>% mutate(ADE_per_neigbbourhood = reviews_event$freq_ade/sum(reviews_event$freq_ade)*100)
+reviews_event <-reviews_event %>% mutate(NOT_ADE_per_neigbbourhood = reviews_event$freq_year_round/sum(reviews_event$freq_year_round)*100)
+```
+## Create overviews of the data
+### Create an overview for reviews per week
+```{r overview reviews per week, message=FALSE}
+revperweek <- adam_reviews_pw  %>% group_by(weeks) %>% summarize(nr_comments = sum(comments, NA.rm=FALSE))
+```
+### Create an overview for reviews per day
+```{r overview reviews per day, message=FALSE}
+revperday <-  adam_reviews_pw  %>% group_by(date) %>% summarize(nr_comments = sum(comments, NA.rm=FALSE))
+```
+### Create an overview for reviews by neighbourhood per day
+```{r overview reviews by neighbourhood per day, message=FALSE}
+revperday_neigbourhood <- adam_reviews %>% group_by(date, neighbourhood_cleansed) %>% summarize(nr_comments = sum(comments, na.rm=TRUE))
+```
